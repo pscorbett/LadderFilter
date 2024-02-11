@@ -1,0 +1,136 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 6,
+			"revision" : 0,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 81.0, 150.0, 1045.0, 763.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-7",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 881.0, 14.0, 275.0, 22.0 ],
+					"text" : "in 3 @comment resonance @min 0. @max 4."
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-6",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 465.5, 14.0, 316.0, 22.0 ],
+					"text" : "in 2 @comment \"cutoff frequency\" @min 0. @max 20000."
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"code" : "// parameter inputs\r\nParam fbk(0.0,min=0,max=4.5); // feedback\r\nParam b(0.0, min=-0.9, max=0.9); // bias\r\n\r\n// previous samples\r\n// accumulator states\r\nHistory s1(0.0);\r\nHistory s2(0.0);\r\nHistory s3(0.0);\r\nHistory s4(0.0);\r\nHistory s5(0.0);\r\n\r\n// y-vector\r\nHistory y1(0.0);\r\nHistory y2(0.0);\r\nHistory y3(0.0);\r\nHistory y4(0.0);\r\nHistory y5(0.0);\r\n\r\n// y estimate\r\nHistory y1_est(0.0);\r\nHistory y2_est(0.0);\r\nHistory y3_est(0.0);\r\nHistory y4_est(0.0);\r\nHistory y5_est(0.0);\r\n\r\n// F vector\r\nHistory F1(0.0);\r\nHistory F2(0.0);\r\nHistory F3(0.0);\r\nHistory F4(0.0);\r\nHistory F5(0.0);\r\n\r\n// Jacobian elements\r\nHistory j00(0.0);\r\nHistory j03(0.0);\r\nHistory j04(0.0);\r\nHistory j10(0.0);\r\nHistory j11(0.0);\r\nHistory j21(0.0);\r\nHistory j22(0.0);\r\nHistory j32(0.0);\r\nHistory j33(0.0);\r\nHistory j43(0.0);\r\nHistory den(0.0);\r\n\r\n// system inputs\r\nx = in1;\r\ncutoff = in2;\r\nr = in3;\r\n\r\n// constants\nerrorThresh = 0.000001;\t\t\t// max NR error (stopping condition)\r\ng_hp = 8.0 * PI / samplerate;\t// highpass filter at 8Hz\r\ng_den = (2.0 * g_hp) + 1.0;\r\n\r\n\r\n// start of sample processing\r\ng = cutoff * PI / samplerate;\r\ni = 0;\r\nresidue = 100;\r\n\r\nwhile(abs(residue) > errorThresh && i < 50)\n{\n    // pre-compute tanh functions\n    tanh_x = tanh(x - r*y4 + y5);\n    tanh_y1 = tanh(y1);\n    tanh_y2 = tanh(y2);\n    tanh_y3 = tanh(y3);\n    tanh_y4 = tanh(y4);\n    tanh_y5 = tanh(fbk*(y4 - b));\n    \n    // F(y) using current y values\n    F1 = g*(tanh_x-tanh_y1) + s1 - y1;\n    F2 = g*(tanh_y1-tanh_y2) + s2 - y2;\n    F3 = g*(tanh_y2-tanh_y3) + s3 - y3;\n    F4 = g*(tanh_y3-tanh_y4) + s4 - y4;\n    F5 = (tanh_y5 + s5) / g_den - y5;\n    \n    // pre-compute re-used algebra (helper \"functions\")\n    help_x = 1.0 - (tanh_x * tanh_x);\n    help_y1 = 1.0 - (tanh_y1 * tanh_y1);\n    help_y2 = 1.0 - (tanh_y2 * tanh_y2);\n    help_y3 = 1.0 - (tanh_y3 * tanh_y3);\n    help_y4 = 1.0 - (tanh_y4 * tanh_y4);\n    help_y5 = 1.0 - (tanh_y5 * tanh_y5);\n    minus_g = -1.0 * g;\n    \n    // Dynamic Jacobian Matrix Elements\n    // only change these, the rest are zero (sparse)\n    j00 = minus_g*help_y1 - 1.0;\n    j03 = minus_g*r*help_x;\n    j04 = g*help_x;\n    j10 = g*help_y1;\n    j11 = minus_g*help_y2 - 1.0;\n    j21 = g*help_y2;\n    j22 = minus_g*help_y3 - 1.0;\n    j32 = g*help_y3;\n    j33 = minus_g*help_y4 - 1.0;\n    j43 = fbk*help_y5/g_den;\n\n    \n    // calculate next NR step\n    y1_est = y1;\r\n\ty2_est = y2;\r\n\ty3_est = y3;\r\n\ty4_est = y4;\r\n\ty5_est = y5;\n\n    den = j00*j11*j22*j33 - j03*j10*j21*j32 - j04*j10*j21*j32*j43;\n    y1 = y1 - (F1*j11*j22*j33 - F2*(j03*j21*j32 + j04*j21*j32*j43) + F3*(j03*j11*j32 + j04*j11*j32*j43) - F4*(j03*j11*j22 + j04*j11*j22*j43) + F5*j04*j11*j22*j33) / den;\n    y2 = y2 + (F1*j10*j22*j33 - F2*j00*j22*j33 + F3*(j03*j10*j32 + j04*j10*j32*j43) - F4*(j03*j10*j22 + j04*j10*j22*j43) + F5*j04*j10*j22*j33) / den;\n    y3 = y3 - (F1*j10*j21*j33 - F2*j00*j21*j33 + F3*j00*j11*j33 - F4*(j03*j10*j21 + j04*j10*j21*j43) + F5*j04*j10*j21*j33) / den;\n    y4 = y4 + (F1*j10*j21*j32 - F2*j00*j21*j32 + F3*j00*j11*j32 - F4*j00*j11*j22 + F5*j04*j10*j21*j32) / den;\n    y5 = y5 + (F1*j10*j21*j32*j43 - F2*j00*j21*j32*j43 + F3*j00*j11*j32*j43 - F4*j00*j11*j22*j43 + F5*(j00*j11*j22*j33 - j03*j10*j21*j32)) / den;\n    \n    residue = y4 - y4_est;\n    i = i + 1;\n}\n\n// update capacitor states\ns1 = 2.0 * y1 - s1;\ns2 = 2.0 * y2 - s2;\ns3 = 2.0 * y3 - s3;\ns4 = 2.0 * y4 - s4;\ns5 = 2.0 * (y5 - tanh(fbk*(y4 - b))) - s5;\n\n// save y\nout1 = y4;",
+					"fontface" : 0,
+					"fontname" : "Menlo",
+					"fontsize" : 12.0,
+					"id" : "obj-5",
+					"maxclass" : "codebox",
+					"numinlets" : 3,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 50.0, 40.0, 850.0, 643.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 50.0, 14.0, 127.0, 22.0 ],
+					"text" : "in 1 @comment signal"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 50.0, 692.0, 137.0, 22.0 ],
+					"text" : "out 1 @comment output"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-5", 0 ],
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-5", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-5", 1 ],
+					"source" : [ "obj-6", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-5", 2 ],
+					"source" : [ "obj-7", 0 ]
+				}
+
+			}
+ ],
+		"autosave" : 0
+	}
+
+}
