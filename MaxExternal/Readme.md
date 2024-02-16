@@ -2,7 +2,7 @@
 The ladder filter model was built into various formats.
 
 ## Mac
-The Max MSP external was built on top of the Min-Devkit framework. Refer to their GitHub for build instructions. Their repo must be cloned into the Packages directory. There are some extra configuration steps required to build the mac version:
+The Max MSP external was built on top of the Min-Devkit framework. Refer to their GitHub for build instructions(https://github.com/Cycling74/min-devkit). Their repo must be cloned into the Packages directory. There are some extra configuration steps required to build the mac version:
 
 1) Copy Osprey.ladder_tilde folder into the /source/projects directory from the location of the min-devkit clone (Typically /Documents/Max [v#]/Packages/min-devkit, although this could change if you created your own package as per the min-devkit instructions).
 2) The CMakeLists.txt file might have to be slightly altered as per your Mac's configuraton. If you need a starting point, copy the CMake file from the min.xfade_tilde project.
