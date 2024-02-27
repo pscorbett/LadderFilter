@@ -5,5 +5,5 @@ This model solves a set of equations that approximates a Moog Ladder Filter usin
 ### Project Components:
 * Python Prototypes
 * Reseach Paper
-* Max MSP External (planned)
+* Max MSP External (Ladder, OTA Cascade, VCA)
 * Cross-platform C++ JUCE Plugin (planned)
